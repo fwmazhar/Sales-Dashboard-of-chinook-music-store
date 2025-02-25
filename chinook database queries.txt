@@ -1,0 +1,123 @@
+Questions 
+
+1 - What is the most popular music Genre for each country
+(We will determine the most popular genre as the genre with the highest amount of purchases) 
+
+
+Query :
+ 
+SELECT Country, Genre_name, PurchaseCount
+FROM (
+    SELECT 
+        c.Country,
+        g.Name AS Genre_name,
+        COUNT(*) AS PurchaseCount,
+        RANK() OVER (PARTITION BY c.Country ORDER BY COUNT(*) DESC) AS rnk
+    FROM Customer c
+    JOIN Invoice i ON c.CustomerId = i.CustomerId
+    JOIN InvoiceLine iv ON i.InvoiceId = iv.InvoiceId
+    JOIN Track t ON t.TrackId = iv.TrackId
+    JOIN Genre g ON g.GenreId = t.GenreId
+    GROUP BY c.Country, g.Name
+) ranked
+WHERE rnk = 1
+ORDER BY Country;
+
+
+
+2-Return all the track names that have a song length longer than the average song length
+
+Query : 
+
+SELECT name , Milliseconds
+FROM track
+WHERE Milliseconds > (SELECT AVG(Milliseconds)
+FROM track)
+ORDER BY Milliseconds DESC
+LIMIT 10 
+
+
+3- determines the customer that has spent the most on music for each country.
+
+Query:
+
+WITH TOP_SPENDERS AS(SELECT c.Country , SUM(total) AS TotalSpent ,FirstName , LastName, c.CustomerId , RANK() OVER(PARTITION BY c.Country ORDER BY SUM(total) DESC ) AS RNK
+FROM Customer c 
+JOIN Invoice i
+ON c.CustomerId = i.CustomerId
+GROUP BY c.CustomerId , c.Country
+ORDER BY SUM(total) DESC) 
+
+SELECT Country , TotalSpent, FirstName , LastName, CustomerId 
+FROM TOP_SPENDERS
+WHERE RNK = 1
+
+4- the top 3 albums with the highest total sales
+
+Query: 
+
+SELECT a.Title , sum(i.total) AS TotalSpent 
+FROM Invoice i 
+JOIN InvoiceLine iv
+ON i.InvoiceId = iv.InvoiceId
+JOIN Track t
+ON t.TrackId = iv.TrackId
+JOIN Album a
+ON a.AlbumId = t.AlbumId
+GROUP BY a.Title
+ORDER BY TotalSpent DESC
+LIMIT 3
+
+
+
+5- 
+
+the top 3 artists with the highest total sales
+
+# Instead of summing i.Total (which is repeated for every track), we sum only the actual amounts paid per track (iv.UnitPrice * iv.Quantity).
+
+Query : 
+
+SELECT at.Name, SUM(iv.UnitPrice * iv.Quantity) AS TotalSpent  
+FROM InvoiceLine iv  
+JOIN Track t ON iv.TrackId = t.TrackId  
+JOIN Album a ON a.AlbumId = t.AlbumId  
+JOIN Artist at ON at.ArtistId = a.ArtistId  
+GROUP BY at.Name  
+ORDER BY TotalSpent DESC  
+LIMIT 3;
+
+
+
+
+
+6- 
+
+
+the top 3 most profitable music genres
+
+# Instead of summing i.Total (which is repeated for every track), we sum only the actual amounts paid per track (iv.UnitPrice * iv.Quantity).
+
+Query : 
+SELECT g.Name, SUM(iv.UnitPrice * iv.Quantity) AS TotalSpent  
+FROM InvoiceLine iv  
+JOIN Track t ON iv.TrackId = t.TrackId  
+JOIN Genre g ON g.GenreId = t.GenreId  
+GROUP BY g.Name  
+ORDER BY TotalSpent DESC  
+LIMIT 3;
+
+
+
+7- top 5 bands (artists) who have written the most music
+
+
+Query:
+
+SELECT ar.Name AS ArtistName, COUNT(t.TrackId) AS TotalTracks  
+FROM Track t  
+JOIN Album a ON t.AlbumId = a.AlbumId  
+JOIN Artist ar ON a.ArtistId = ar.ArtistId  
+GROUP BY ar.Name  
+ORDER BY TotalTracks DESC  
+LIMIT 5;
